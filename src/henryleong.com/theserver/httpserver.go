@@ -6,6 +6,8 @@ import (
 
 	"log"
 
+	"os"
+
 	"github.com/gorilla/mux"
 )
 
@@ -32,6 +34,9 @@ func handleGreetings(w http.ResponseWriter, r *http.Request) {
 	counter++
 	str := fmt.Sprintf("greetings[%d]:%d\n", httpPort, counter)
 
-	log.Print(str)
+	//log.Print(str)
+	fmt.Fprintf(os.Stdout, "%s", str)
+	fmt.Fprintf(os.Stderr, "%s", str)
+
 	w.Write([]byte(str))
 }

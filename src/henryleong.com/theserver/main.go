@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -26,7 +28,7 @@ func initSignalHandler() {
 
 func main() {
 
-	var pluginCmd *exec.Cmd = nil
+	log.SetOutput(os.Stdout)
 
 	quitCh = make(chan bool)
 
@@ -35,16 +37,18 @@ func main() {
 	// start the plugin if it's not a plugin
 	if !flags.Plugin {
 		port := flags.Port + 1
-		pluginCmd = startPlugin(port)
+		pluginCmd := startPlugin(port)
+
+		defer func() {
+			if pluginCmd != nil {
+				log.Printf("Killing process id: %d", pluginCmd.Process.Pid)
+				err := pluginCmd.Process.Kill()
+				log.Printf("Kill err: %+v", err)
+			}
+		}()
 	}
 
 	<-quitCh
-
-	if pluginCmd != nil {
-		log.Printf("Killing process id: %d", pluginCmd.Process.Pid)
-		err := pluginCmd.Process.Kill()
-		log.Printf("Kill err: %+v", err)
-	}
 
 }
 
@@ -57,10 +61,34 @@ func startPlugin(port int) *exec.Cmd {
 
 	log.Printf("Executing %s with %+v", cmdFile, args)
 
+	stdoutR, stdoutW := io.Pipe()
+	stderrR, stderrW := io.Pipe()
+
 	cmd := exec.Command(cmdFile, args...)
+	cmd.Stdout = stdoutW
+	cmd.Stderr = stderrW
+
 	cmd.Start()
 
 	log.Printf("New process id: %d", cmd.Process.Pid)
 
+	go readPipe("stdout", stdoutR)
+	go readPipe("stderr", stderrR)
+
 	return cmd
+}
+
+func readPipe(pipeName string, reader *io.PipeReader) {
+	buf := bufio.NewReader(reader)
+	for {
+		line, err := buf.ReadBytes('\n')
+		if line != nil {
+			log.Printf("[plugin %s] %s", pipeName, string(line))
+		}
+
+		if err == io.EOF {
+			return
+		}
+	}
+
 }
