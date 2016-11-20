@@ -25,7 +25,7 @@ func startServer(port int) {
 
 func handleGreetings(w http.ResponseWriter, r *http.Request) {
 	counter++
-	str := fmt.Sprintf("greetings:%d ", counter)
+	str := fmt.Sprintf("greetings:%d\n", counter)
 
 	log.Print(str)
 	w.Write([]byte(str))
