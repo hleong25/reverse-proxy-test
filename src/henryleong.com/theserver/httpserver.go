@@ -3,10 +3,13 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"log"
 
 	"os"
+
+	"net/http/httputil"
 
 	"github.com/gorilla/mux"
 )
@@ -22,7 +25,18 @@ func startServer(port int) {
 	httpPort = port
 
 	r := mux.NewRouter()
-	r.HandleFunc("/greetings", handleGreetings)
+
+	if flags.Plugin {
+		r.HandleFunc("/greetings", handleGreetings)
+	} else {
+		log.Print("setting up reverse proxy")
+
+		pluginPort := flags.Port + 1
+		proxyUrl, _ := url.Parse(fmt.Sprintf("http://localhost:%d", pluginPort))
+
+		reverseProxy := httputil.NewSingleHostReverseProxy(proxyUrl)
+		r.HandleFunc("/greetings", reverseProxy.ServeHTTP)
+	}
 
 	bind := fmt.Sprintf("localhost:%d", httpPort)
 
