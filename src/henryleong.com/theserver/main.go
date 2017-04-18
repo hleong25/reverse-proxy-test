@@ -61,20 +61,19 @@ func startPlugin(port int) *exec.Cmd {
 
 	log.Printf("Executing %s with %+v", cmdFile, args)
 
-	stdoutR, stdoutW := io.Pipe()
-	stderrR, stderrW := io.Pipe()
-
 	cmd := exec.Command(cmdFile, args...)
+
+	stdoutR, stdoutW := io.Pipe()
 	cmd.Stdout = stdoutW
+	go readPipe("stdout", stdoutR)
+
+	stderrR, stderrW := io.Pipe()
 	cmd.Stderr = stderrW
+	go readPipe("stderr", stderrR)
 
 	cmd.Start()
 
 	log.Printf("New process id: %d", cmd.Process.Pid)
-
-	go readPipe("stdout", stdoutR)
-	go readPipe("stderr", stderrR)
-
 	return cmd
 }
 

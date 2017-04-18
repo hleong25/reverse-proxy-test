@@ -10,8 +10,6 @@ import (
 	"os"
 
 	"net/http/httputil"
-
-	"github.com/gorilla/mux"
 )
 
 var counter int
@@ -24,24 +22,22 @@ func init() {
 func startServer(port int) {
 	httpPort = port
 
-	r := mux.NewRouter()
-
 	if flags.Plugin {
-		r.HandleFunc("/greetings", handleGreetings)
+		http.HandleFunc("/greetings", handleGreetings)
 	} else {
 		log.Print("setting up reverse proxy")
 
 		pluginPort := flags.Port + 1
-		proxyUrl, _ := url.Parse(fmt.Sprintf("http://localhost:%d", pluginPort))
+		proxyUrl, _ := url.Parse(fmt.Sprintf("http://127.0.0.1:%d", pluginPort))
 
 		reverseProxy := httputil.NewSingleHostReverseProxy(proxyUrl)
-		r.HandleFunc("/greetings", reverseProxy.ServeHTTP)
+		http.HandleFunc("/greetings", reverseProxy.ServeHTTP)
 	}
 
 	bind := fmt.Sprintf(":%d", httpPort)
 
 	log.Printf("Binding server at %s", bind)
-	http.ListenAndServe(bind, r)
+	http.ListenAndServe(bind, nil)
 }
 
 func handleGreetings(w http.ResponseWriter, r *http.Request) {
