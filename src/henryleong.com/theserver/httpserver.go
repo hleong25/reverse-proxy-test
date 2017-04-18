@@ -38,7 +38,7 @@ func startServer(port int) {
 		r.HandleFunc("/greetings", reverseProxy.ServeHTTP)
 	}
 
-	bind := fmt.Sprintf("localhost:%d", httpPort)
+	bind := fmt.Sprintf(":%d", httpPort)
 
 	log.Printf("Binding server at %s", bind)
 	http.ListenAndServe(bind, r)
