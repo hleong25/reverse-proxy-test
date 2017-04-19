@@ -12,27 +12,16 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"syscall"
+	"runtime"
 )
 
 var quitCh chan bool
 
 func init() {
-	initSignalHandler()
-
 	flag.BoolVar(&flags.Plugin, "plugin", false, "Start as plugin")
 	flag.IntVar(&flags.Port, "port", 7000, "HTTP Server port")
 
 	flag.Parse()
-}
-
-func initSignalHandler() {
-	c := make(chan os.Signal, 2)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-c
-		quitCh <- true
-	}()
 }
 
 type Flags struct {
@@ -41,6 +30,22 @@ type Flags struct {
 }
 
 var flags *Flags = &Flags{}
+
+func init() {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+
+	go func() {
+		for sig := range c {
+			buf := make([]byte, 1<<20)
+			buf = buf[:runtime.Stack(buf, true)]
+			log.Printf("Caught SIG %+v\n%s", sig, string(buf))
+
+			quitCh <- true
+			break
+		}
+	}()
+}
 
 func main() {
 
@@ -118,8 +123,6 @@ func startServer(port int) {
 			str := fmt.Sprintf("greetings[%d]:%d\n", port, counter)
 
 			log.Printf("%s", str)
-			// fmt.Fprintf(os.Stdout, "%s", str)
-			// fmt.Fprintf(os.Stderr, "%s", str)
 
 			w.Write([]byte(str))
 		})
